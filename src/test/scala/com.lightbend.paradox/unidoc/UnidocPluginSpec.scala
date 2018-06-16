@@ -12,9 +12,26 @@ class UnidocPluginSpec extends MarkdownBaseSpec {
   val allClasses = Array(
     "akka.actor.ActorRef",
     "akka.actor.typed.ActorRef",
+    "akka.actor.FSM$StopEvent",
+    "akka.actor.FSM$StopEvent$",
+    "akka.cluster.client.ClusterClient",
+    "akka.cluster.client.ClusterClient$",
+    "akka.cluster.client.ClusterClient$Publish",
+    "akka.cluster.client.ClusterClient$Publish$",
     "akka.dispatch.Envelope",
+    "akka.http.javadsl.model.sse.ServerSentEvent",
+    "akka.http.javadsl.marshalling.Marshaller",
+    "akka.http.javadsl.marshalling.Marshaller$",
+    "akka.http.scaladsl.marshalling.Marshaller",
+    "akka.http.scaladsl.marshalling.Marshaller$",
+    "akka.stream.javadsl.Source",
+    "akka.stream.javadsl.Source$",
+    "akka.stream.scaladsl.Source",
+    "akka.stream.scaladsl.Source$",
     "akka.stream.javadsl.Flow",
+    "akka.stream.javadsl.Flow$",
     "akka.stream.scaladsl.Flow",
+    "akka.stream.scaladsl.Flow$"
   )
 
   override val markdownWriter = new Writer(
@@ -31,7 +48,7 @@ class UnidocPluginSpec extends MarkdownBaseSpec {
     "scaladoc.akka.base_url" -> "https://doc.akka.io/api/akka/2.5",
     "scaladoc.akka.http.base_url" -> "https://doc.akka.io/api/akka-http/current",
     "javadoc.akka.base_url" -> "https://doc.akka.io/japi/akka/2.5",
-    "javadoc.akka.http.base_url" -> "http://doc.akka.io/japi/akka-http/current",
+    "javadoc.akka.http.base_url" -> "https://doc.akka.io/japi/akka-http/current",
   )
 
   "Unidoc directive" should "generate markdown correctly when there is only one match" in {
@@ -77,12 +94,58 @@ class UnidocPluginSpec extends MarkdownBaseSpec {
       )
   }
 
-  it should "" in {
-    markdown("@unidoc[akka.cluster.client.ClusterClient$]") shouldEqual
+  it should "throw an exception when `.` is in the [label], but the label is not fqcn" in {
+    val thrown = the[IllegalStateException] thrownBy markdown("@unidoc[actor.typed.ActorRef]")
+    thrown.getMessage shouldEqual
+      "fqcn not found by @unidoc[actor.typed.ActorRef]"
+  }
+
+  it should "generate markdown correctly for a companion object" in {
+    markdown("@unidoc[ClusterClient$]") shouldEqual
       html(
         """<p><span class="group-scala">
-          |<a href="https://doc.akka.io/api/akka/2.5/akka/cluster/client/ClusterClient$$Publish.html">ClusterClient.Publish</a></span><span class="group-java">
-          |<a href="https://doc.akka.io/japi/akka/2/akka/cluster/client/ClusterClient.Publish.html">ClusterClient.Publish</a></span>
+          |<a href="https://doc.akka.io/api/akka/2.5/akka/cluster/client/ClusterClient$.html">ClusterClient</a></span><span class="group-java">
+          |<a href="https://doc.akka.io/japi/akka/2.5/?akka/cluster/client/ClusterClient$.html">ClusterClient</a></span>
+          |</p>""".stripMargin
+      )
+  }
+
+//  it should "generate markdown correctly for case classes under an object scope" in {
+//    markdown("@unidoc[FSM$StopEvent]") shouldEqual
+//      html(
+//        """<p><span class="group-scala">
+//          |<a href="https://doc.akka.io/api/akka/2.5/akka/actor/FSM$$StopEvent.html">ClusterClient.Publish</a></span><span class="group-java">
+//          |<a href="https://doc.akka.io/japi/akka/2.5/?akka/actor/FSM.StopEvent.html">ClusterClient.Publish</a></span>
+//          |</p>""".stripMargin
+//      )
+//  }
+
+  it should "generate markdown correctly for type parameter and wiledcard" in {
+    markdown("@unidoc[Source[ServerSentEvent, \\_]]") shouldEqual
+      html(
+        """<p><span class="group-java">
+          |<a href="https://doc.akka.io/japi/akka/2.5/?akka/stream/javadsl/Source.html">Source&lt;ServerSentEvent, ?&gt;</a></span><span class="group-scala">
+          |<a href="https://doc.akka.io/api/akka/2.5/akka/stream/scaladsl/Source.html">Source[ServerSentEvent, _]</a></span>
+          |</p>""".stripMargin
+      )
+  }
+
+  it should "generate markdown correctly for type parameters with concrete names" in {
+    markdown("@unidoc[Flow[Message, Message, Mat]]") shouldEqual
+      html(
+        """<p><span class="group-java">
+          |<a href="https://doc.akka.io/japi/akka/2.5/?akka/stream/javadsl/Flow.html">Flow&lt;Message, Message, Mat&gt;</a></span><span class="group-scala">
+          |<a href="https://doc.akka.io/api/akka/2.5/akka/stream/scaladsl/Flow.html">Flow[Message, Message, Mat]</a></span>
+          |</p>""".stripMargin
+      )
+  }
+
+  it should "generate markdown correctly for nested type parameters" in {
+    markdown("@unidoc[Marshaller[Try[A], B]]") shouldEqual
+      html(
+        """<p><span class="group-java">
+          |<a href="https://doc.akka.io/japi/akka-http/current/?akka/http/javadsl/marshalling/Marshaller.html">Marshaller&lt;Try&lt;A&gt;, B&gt;</a></span><span class="group-scala">
+          |<a href="https://doc.akka.io/api/akka-http/current/akka/http/scaladsl/marshalling/Marshaller.html">Marshaller[Try[A], B]</a></span>
           |</p>""".stripMargin
       )
   }
